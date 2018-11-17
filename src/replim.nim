@@ -7,8 +7,9 @@ import os
 {.push checks:off.}
 
 const
+    version = "0.1.3"
     message = fmt"""
-Replim 0.1.2 (default, Nov 14 2018, 13:10:13) [{hostOS}, {hostCPU}]
+Replim {version} (default, Nov 14 2018, 13:10:13) [{hostOS}, {hostCPU}]
     :back : clear last line.
     :clear : clear all lines.
     :quit : quit this program.
@@ -109,7 +110,7 @@ proc main() =
         of "":
             nowblock -= 1
             if nowblock == 0:
-                let errc = execCmd("nim e -r --verbosity:0 --hints:off repl.nims")
+                let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
                 if errc != 0:
                     delLine()
                     nowblock = pastblock
@@ -118,7 +119,7 @@ proc main() =
             continue
         else:
             pastblock = nowblock
-            if assnKey.find(order.split(" ")[0]) == -1 and order.find("=") == -1 and keywords.find(order.split(" ")[0]) == -1:
+            if assnKey.find(order.split(" ")[0]) == -1 and order.find("=") == -1 and keywords.find(order.split(" ")[0]) == -1 and order.match(re"\{\..*\.\}").isNone:
                 if order.high >= 1 and not order.endsWith(":"):
                     if order.split(":").len != 2:
                         order = fmt"once({order})"
