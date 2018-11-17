@@ -7,7 +7,7 @@ import os
 {.push checks:off.}
 
 const
-    version = "0.1.3"
+    version = "0.1.4"
     message = fmt"""
 Replim {version} (default, Nov 14 2018, 13:10:13) [{hostOS}, {hostCPU}]
     :back : clear last line.
@@ -22,11 +22,9 @@ template on_ce[T: not void](arg: T): void =
     echo arg
 template on_ce(args: varargs[untyped]): void =
     echo args
-template on_ce[T: type](arg: T): void =
-    echo arg
 """
     keywords = [
-        "import", "using", "macro", "template", "return"
+        "import", "using", "macro", "template", "return", "once", "echo"
     ]
     blockKey = [
         "case"

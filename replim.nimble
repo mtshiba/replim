@@ -1,5 +1,5 @@
 # Package
-version       = "0.1.3"
+version       = "0.1.4"
 author        = "gmShiba"
 description   = "most quick REPL of nim"
 license       = "MIT"
