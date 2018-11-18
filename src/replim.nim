@@ -108,7 +108,7 @@ proc main() =
         of "":
             nowblock -= 1
             if nowblock == 0:
-                let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
+                let errc = execCmd("nim e -r --checks:off --hints:off repl.nims")
                 if errc != 0:
                     delLine()
                     nowblock = pastblock
@@ -135,7 +135,7 @@ proc main() =
                 nowblock += 1
 
             if nowblock == 0:
-                let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
+                let errc = execCmd("nim e -r --checks:off --hints:off repl.nims")
                 if errc != 0:
                     delLine()
                     nowblock = pastblock
