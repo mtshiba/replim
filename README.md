@@ -5,6 +5,15 @@
 
 replim is the most quick REPL of nim.
 
+# Installation
+
+if you have installed Nim already, that's easy:
+
+```
+nimble install replim
+```
+
+
 # Features
 
 - checking value without "echo"

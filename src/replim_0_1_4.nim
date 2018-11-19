@@ -7,7 +7,7 @@ import os
 {.push checks:off.}
 
 const
-    version = "0.1.3"
+    version = "0.1.4"
     date = "Nov 17 2018, 20:09:00"
     message = fmt"""
 Replim {version} (default, {date}) [{hostOS}, {hostCPU}]
