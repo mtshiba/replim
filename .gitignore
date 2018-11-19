@@ -1,2 +1,4 @@
 bin
 .vscode
+.DS_Store
+repl.nims
