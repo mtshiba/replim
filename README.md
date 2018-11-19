@@ -1,5 +1,6 @@
 # Replim
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Build Status](https://travis-ci.org/gmshiba/replim.svg?branch=master)](https://travis-ci.org/gmshiba/replim)
 [![nimble](https://raw.githubusercontent.com/yglukhov/nimble-tag/master/nimble.png)](https://github.com/yglukhov/nimble-tag)
 
 replim is the most quick REPL of nim.
