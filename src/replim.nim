@@ -7,16 +7,16 @@ import os
 {.push checks:off.}
 
 const
-    version = "0.1.3"
+    version = "0.2.0"
+    date = "Nov 19 2018, 14:46:00"
     message = fmt"""
-Replim {version} (default, Nov 14 2018, 13:10:13) [{hostOS}, {hostCPU}]
+Replim {version} (default, {date}) [{hostOS}, {hostCPU}]
     :back : clear last line.
     :clear : clear all lines.
     :quit : quit this program.
     :show : display history.
 """
     initcode = """
-import typetraits
 template on_ce(state: void): void = discard
 template on_ce[T: not void](arg: T): void =
     echo arg
@@ -25,8 +25,9 @@ template on_ce(args: varargs[untyped]): void =
 template on_ce[T: type](arg: T): void =
     echo arg
 """
+
     keywords = [
-        "import", "using", "macro", "template", "return"
+        "import", "from", "using", "macro", "template", "return", "discard", "once"
     ]
     blockKey = [
         "case"
@@ -35,36 +36,45 @@ template on_ce[T: type](arg: T): void =
         "var", "let", "const", "proc", "type"
     ]
 
-var
-    nowblock = 0
-    pastblock = 0
-    code = initcode
+type BlockKind = enum
+    Main
+    Proc
+    Temp
+    Macro
+    For
+    If
+    Elif
+    Else
+    Case
+    Of
+    While
+    Block
+    Assn
+    Type
+    Other
+
+
+type Replim = object of RootObj
+    nowblock: seq[BlockKind]
+    pastblock: seq[BlockKind]
+    code: string
 
 proc escape(s: var string) =
     s = s.replace(re".\[D", "").replace("[", "")
 
-proc blockStart(s: string): bool =
-    if s.endsWith(":") or s.endsWith("=") or s.startsWith("type "):
+proc save(self: Replim) =
+    let f = open("repl.nims", fmWrite)
+    f.write(self.code)
+    f.close()
+
+proc canContainEcho(blockkind: seq[BlockKind]): bool =
+    if blockkind.len() == 1:
+        return false
+
+    if blockkind[1] == Proc or blockkind[1] == Temp or blockkind[1] == Macro:
         return true
-    for key in blockKey:
-        if s.startsWith(key):
-            return true
-    for assn in assnKey:
-        if s == assn:
-            return true
-    return false
-
-proc delLine() =
-    var codelines = code.split("\n")
-    codelines.del(codelines.high-1)
-    code = codelines.join("\n")
-
-proc delOnce() =
-    code = code.replace(re"once.*", "")
-    var rep = code.replace(re".*:\n *\n", "\n")
-    while code != rep:
-        code = rep
-        rep = code.replace(re".*:\n *\n", "\n")
+    else:
+        return false
 
 proc `*`(a: string, times: int): string  =
     result = ""
@@ -73,76 +83,184 @@ proc `*`(a: string, times: int): string  =
     for i in countup(1, times):
         result = result & a
 
+proc delLine(self: var Replim) =
+    var codelines = self.code.split("\n")
+    codelines.del(codelines.high-1)
+    self.code = codelines.join("\n") & "\n"
+
+proc delOnce(self: var Replim) =
+    self.code = self.code.replace(re"once.*", "")
+    self.code = self.code.replace(re"case.*\n\n", "\n")
+    var rep = self.code.replace(re".*:\n *\n", "\n")
+    while self.code != rep:
+        self.code = rep
+        rep = self.code.replace(re".*:\n *\n", "\n")
+
+proc delBlock(self: var Replim) =
+    var rep = self.code.replace(re".*:\n *\n", "\n")
+    while self.code != rep:
+        self.code = rep
+        rep = self.code.replace(re".*:\n *\n", "\n")
+
+proc isContinueBlock(blockkind: seq[BlockKind]): bool =
+    if blockkind.find(If) != -1 or blockkind.find(Elif) != -1 or blockkind.find(Case) != -1:
+        return true
+    return false
+
+proc orderType(self: Replim, order: string): string =
+    if order.match(re"\{\..*\.\}").isSome:
+        return "pragma"
+    elif blockKey.find(order.split(" ")[0]) != -1:
+        return "case"
+    elif order.split(" ")[0] == "of":
+        return "of"
+    elif assnKey.find(order) != -1:
+        return "assnblock"
+    elif keywords.find(order.split(" ")[0]) != -1:
+        return "keystatement"
+    elif order.endsWith(":"):
+        if order == "else:" and self.nowblock.find(Case) != -1:
+            return "caseelse"
+        else:
+            return "block"
+    elif order.endsWith("="):
+        return "statement"
+    elif assnKey.find(order.split(" ")[0]) != -1:
+        return "expression"
+    elif order.match(re".*=.*").isSome:
+        return "expression"
+    else:
+        if self.nowblock.find(Proc) != -1 or self.nowblock.find(Assn) != -1 or self.nowblock.find(Type) != -1:
+            return "expression"
+        # onceが必要なのはこれだけ
+        else:
+            return "oncecall"
+
+proc newReplim(): Replim =
+    result.nowblock = @[Main]
+    result.pastblock = @[Main]
+    result.code = initcode
+    return result
 
 proc main() =
+    var vm = newReplim()
     echo message
     while true:
-        if nowblock > 0:
+        if vm.nowblock.len > 1:
             stdout.write("...")
-            for i in countup(1, nowblock):
+            for i in countup(1, vm.nowblock.len-1):
                 stdout.write("    ")
         else:
-            stdout.write(">>>")
+            if vm.pastblock.isContinueBlock():
+                stdout.write("...")
+            else:
+                stdout.write(">>>")
         stdout.flushFile()
 
-        var order = stdin.readLine()
-        if order.startsWith("quit") or order == ":quit":
-            break
+        var order = stdin.readline()
         case order
+        of ":quit":
+            break
         of ":show":
-            echo "code:\n", code.replace(initcode, "")
+            echo "block: ", vm.nowblock
+            echo "code:\n", vm.code.replace(initcode, "")
             continue
         of ":clear":
-            nowblock = 0
-            pastblock = 0
-            code = initcode
+            vm.nowblock = @[Main]
+            vm.pastblock = @[Main]
+            vm.code = initcode
             continue
         of ":back":
-            delLine()
-            nowblock = pastblock
+            vm.delLine()
+            vm.nowblock = vm.pastblock
             continue
         # for debuging
         of ":save":
-            let f = open("repl.nims", fmWrite)
-            f.write(code)
-            f.close()
+            vm.save()
             continue
         of "":
-            nowblock -= 1
-            if nowblock == 0:
+            if vm.nowblock[^1] == Of:
+                discard vm.nowblock.pop
+                continue
+            if vm.nowblock != @[Main]:
+                discard vm.nowblock.pop
+            if vm.nowblock.len == 1 and not vm.pastblock.isContinueBlock():
                 let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
-                if errc != 0:
-                    delLine()
-                    nowblock = pastblock
+                if errc == 0:
+                    let pastcode = vm.code.split("\n")[^2].replace(" ", "")
+                    if not vm.pastblock.canContainEcho():
+                        vm.delOnce()
                 else:
-                    delOnce()
+                    vm.delLine()
+                    vm.nowblock = vm.pastblock
             continue
         else:
-            pastblock = nowblock
-            if assnKey.find(order.split(" ")[0]) == -1 and order.find("=") == -1 and keywords.find(order.split(" ")[0]) == -1 and order.match(re"\{\..*\.\}").isNone:
-                if order.high >= 1 and not order.endsWith(":"):
-                    if order.split(":").len != 2:
-                        order = fmt"once({order})"
+            vm.pastblock = vm.nowblock
+            case orderType(vm, order)
+            of "oncecall":
+                order = fmt"once({order})"
+            of "case":
+                vm.code &= "  " * (vm.nowblock.len() - 1) & order & "\n"
+                vm.code.escape()
+                vm.save()
+                continue
+            of "of":
+                vm.code &= "  " * (vm.nowblock.len() - 1) & order & "\n"
+                vm.code.escape()
+                vm.save()
+                vm.nowblock.add(Of)
+                continue
+            of "caseelse":
+                vm.nowblock = @[Main, Else]
+                vm.code &= order & "\n"
+                vm.code.escape()
+                vm.save()
+                continue
+            else:
+                discard
+
+            vm.code &= "  " * (vm.nowblock.len() - 1) & order & "\n"
+            vm.code.escape()
+            vm.save()
+
+            if order.endsWith(":") or order.endsWith("="):
+                case order.split(" ")[0]
+                of "proc":
+                    vm.nowblock.add(Proc)
+                of "template":
+                    vm.nowblock.add(Temp)
+                of "macro":
+                    vm.nowblock.add(Macro)
+                of "for":
+                    vm.nowblock.add(For)
+                of "if":
+                    vm.nowblock.add(If)
+                of "elif":
+                    vm.nowblock.add(Elif)
+                of "else":
+                    vm.nowblock.add(Else)
+                of "while":
+                    vm.nowblock.add(Elif)
+                of "block":
+                    vm.nowblock.add(Block)
+                of "var":
+                    vm.nowblock.add(Assn)
+                of "let":
+                    vm.nowblock.add(Assn)
+                of "const":
+                    vm.nowblock.add(Assn)
+                of "type":
+                    vm.nowblock.add(Type)
                 else:
-                    if not order.endsWith(":"):
-                        order = fmt"once({order})"
-            code &= ("  " * nowblock) & order & "\n"
-            code.escape()
+                    vm.nowblock.add(Other)
 
-            let f = open("repl.nims", fmWrite)
-            f.write(code)
-            f.close()
-
-            if blockStart(order):
-                nowblock += 1
-
-            if nowblock == 0:
+            if vm.nowblock.len() == 1 and not vm.pastblock.isContinueBlock():
                 let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
-                if errc != 0:
-                    delLine()
-                    nowblock = pastblock
+                if errc == 0:
+                    vm.delOnce()
                 else:
-                    delOnce()
+                    vm.delLine()
+                    vm.nowblock = vm.pastblock
 
 
 if isMainModule:
