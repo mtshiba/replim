@@ -11,7 +11,7 @@ replim is the most quick REPL of nim.
 - auto indent
 - running on VM
 
-if you assign variable or functions,
+if you assigned variable or functions,
 you can check those value without typing "echo".
 
 ```
@@ -21,6 +21,8 @@ bar
 >>>proc bar(): string =
 ...    return "foo"
 ...
+>>>echo bar()
+foo
 >>>bar()
 foo
 >>>bar() & ", bar"
@@ -29,7 +31,7 @@ foo, bar
 
 **Warning**
 
-- replim can't import librarys that import C library.
+- replim can't import librarys that import C library at present.
 
 ```
 >>>import nre
