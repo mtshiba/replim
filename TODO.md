@@ -1,8 +1,8 @@
 # bug fix
 
-- return value without keyword 'return'
 - behavior of :back, :clear
+- behavior of 'case'
 
 # future
 
-- auto deleting onetime output
+- import C library

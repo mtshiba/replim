@@ -4,7 +4,7 @@ import osproc
 import nre
 import os
 
-{.push checks:off.}
+{.push checks:off, optimization: speed.}
 
 const
     version = "0.2.0"
@@ -94,11 +94,13 @@ proc delOnce(self: var Replim) =
         self.code = rep
         rep = self.code.replace(re".*:\n *\n", "\n")
 
+#[
 proc delBlock(self: var Replim) =
     var rep = self.code.replace(re".*:\n *\n", "\n")
     while self.code != rep:
         self.code = rep
         rep = self.code.replace(re".*:\n *\n", "\n")
+]#
 
 proc isContinueBlock(blockkind: seq[BlockKind]): bool =
     if blockkind.find(If) != -1 or blockkind.find(Elif) != -1 or blockkind.find(Case) != -1:
