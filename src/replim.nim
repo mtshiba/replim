@@ -7,7 +7,7 @@ import os
 {.push checks:off, optimization: speed.}
 
 const
-    version = "0.2.0"
+    version = "0.2.1"
     date = "Nov 19 2018, 14:46:00"
     message = fmt"""
 Replim {version} (default, {date}) [{hostOS}, {hostCPU}]
@@ -89,6 +89,7 @@ proc delLine(self: var Replim) =
 proc delOnce(self: var Replim) =
     self.code = self.code.replace(re"once.*", "")
     self.code = self.code.replace(re"case.*\n\n", "\n")
+    self.code = self.code.replace(re"\n\nelse:\n( .*)*\n", "\n\n")
     var rep = self.code.replace(re".*:\n *\n", "\n")
     while self.code != rep:
         self.code = rep
@@ -185,7 +186,7 @@ proc main() =
             if vm.nowblock != @[Main]:
                 discard vm.nowblock.pop
             if vm.nowblock.len == 1 and not vm.pastblock.isContinueBlock():
-                let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
+                let errc = execCmd("nim e -r --checks:off --hints:off repl.nims")
                 if errc == 0:
                     let pastcode = vm.code.split("\n")[^2].replace(" ", "")
                     if not vm.pastblock.canContainEcho():
@@ -255,7 +256,7 @@ proc main() =
                     vm.nowblock.add(Other)
 
             if vm.nowblock.len() == 1 and not vm.pastblock.isContinueBlock():
-                let errc = execCmd("nim e -r --verbosity:0 --checks:off --hints:off repl.nims")
+                let errc = execCmd("nim e -r --checks:off --hints:off repl.nims")
                 if errc == 0:
                     vm.delOnce()
                 else:
@@ -265,3 +266,5 @@ proc main() =
 
 if isMainModule:
     main()
+    removeFile("repl.nims")
+
