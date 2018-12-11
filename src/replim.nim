@@ -1,3 +1,5 @@
+import terminal
+import colors
 import strformat
 import strutils
 import osproc
@@ -7,7 +9,7 @@ import os
 {.push checks:off, optimization: speed.}
 
 const
-    version = "0.2.1"
+    version = "0.2.2"
     date = "Nov 19 2018, 14:46:00"
     message = fmt"""
 Replim {version} (default, {date}) [{hostOS}, {hostCPU}]
@@ -33,6 +35,8 @@ template on_ce(args: varargs[untyped]): void =
     assnKey = [
         "var", "let", "const", "proc", "type"
     ]
+
+let fileDir = getHomeDir() & "/replimcathe"
 
 type BlockKind = enum
     Main
@@ -61,11 +65,11 @@ proc escape(s: var string) =
     s = s.replace(re".\[D", "").replace("[", "")
 
 proc save(self: Replim) =
-    let f = open("repl.nims", fmWrite)
+    let f = open(fileDir & "/repl.nims", fmWrite)
     f.write(self.code)
     f.close()
 
-proc canContainEcho(blockkind: seq[BlockKind]): bool =
+#[proc canContainEcho(blockkind: seq[BlockKind]): bool =
     if blockkind.len() == 1:
         return false
 
@@ -73,6 +77,7 @@ proc canContainEcho(blockkind: seq[BlockKind]): bool =
         return true
     else:
         return false
+]#
 
 proc `*`(a: string, times: int): string  =
     result = ""
@@ -94,14 +99,6 @@ proc delOnce(self: var Replim) =
     while self.code != rep:
         self.code = rep
         rep = self.code.replace(re".*:\n *\n", "\n")
-
-#[
-proc delBlock(self: var Replim) =
-    var rep = self.code.replace(re".*:\n *\n", "\n")
-    while self.code != rep:
-        self.code = rep
-        rep = self.code.replace(re".*:\n *\n", "\n")
-]#
 
 proc isContinueBlock(blockkind: seq[BlockKind]): bool =
     if blockkind.find(If) != -1 or blockkind.find(Elif) != -1 or blockkind.find(Case) != -1:
@@ -138,6 +135,8 @@ proc orderType(self: Replim, order: string): string =
             return "oncecall"
 
 proc newReplim(): Replim =
+    if not existsDir(fileDir):
+        createDir(fileDir)
     result.nowblock = @[Main]
     result.pastblock = @[Main]
     result.code = initcode
@@ -186,12 +185,14 @@ proc main() =
             if vm.nowblock != @[Main]:
                 discard vm.nowblock.pop
             if vm.nowblock.len == 1 and not vm.pastblock.isContinueBlock():
-                let errc = execCmd("nim e -r --checks:off --hints:off repl.nims")
+                let (outs, errc) = execCmdEx(fmt"nim e -r --checks:off --hints:off {fileDir}/repl.nims")
                 if errc == 0:
-                    let pastcode = vm.code.split("\n")[^2].replace(" ", "")
-                    if not vm.pastblock.canContainEcho():
-                        vm.delOnce()
+                    echo outs
+                    vm.delOnce()
                 else:
+                    stdout.styledWrite(fgRed, "Error: ")
+                    stdout.write(outs.replace(re"repl.nims\((.*)\) Error: ", "") & "\n")
+                    stdout.flushFile()
                     vm.delLine()
                     vm.nowblock = vm.pastblock
             continue
@@ -256,15 +257,20 @@ proc main() =
                     vm.nowblock.add(Other)
 
             if vm.nowblock.len() == 1 and not vm.pastblock.isContinueBlock():
-                let errc = execCmd("nim e -r --checks:off --hints:off repl.nims")
+                let (outs, errc) = execCmdEx(fmt"nim e -r --checks:off --hints:off {fileDir}/repl.nims")
                 if errc == 0:
+                    echo outs
                     vm.delOnce()
                 else:
+                    stdout.styledWrite(fgRed, "Error: ")
+                    stdout.write(outs.replace(re"repl.nims\((.*)\) Error: ", "") & "\n")
+                    stdout.flushFile()
                     vm.delLine()
                     vm.nowblock = vm.pastblock
 
 
 if isMainModule:
-    main()
-    removeFile("repl.nims")
-
+    try:
+        main()
+    finally:
+        removeDir(fileDir)
