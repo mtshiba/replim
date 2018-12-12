@@ -5,6 +5,10 @@
 
 replim is the most quick REPL of nim.
 
+# DEMO
+
+![demo](demo/replim.gif)
+
 # Installation
 
 if you have installed Nim already, that's easy:

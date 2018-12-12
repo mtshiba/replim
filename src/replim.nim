@@ -10,7 +10,7 @@ import os
 
 const
     version = "0.2.2"
-    date = "Nov 19 2018, 14:46:00"
+    date = "Dec 12 2018, 14:46:00"
     message = fmt"""
 Replim {version} (default, {date}) [{hostOS}, {hostCPU}]
     :back : clear last line.
