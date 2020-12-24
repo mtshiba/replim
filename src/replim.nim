@@ -1,5 +1,5 @@
 import terminal
-import colors
+# import colors
 import strformat
 import strutils
 import osproc
@@ -9,14 +9,14 @@ import os
 {.push checks:off, optimization: speed.}
 
 const
-    version = "0.2.2"
-    date = "Dec 12 2018, 14:46:00"
+    version = "0.2.3"
+    date = "Dec 25 2020"
     message = fmt"""
 Replim {version} (default, {date}) [{hostOS}, {hostCPU}]
-    :back : clear last line.
+    :back : clear the last line.
     :clear : clear all lines.
-    :quit : quit this program.
-    :show : display history.
+    :quit or :exit : quit replim.
+    :display : display the history.
 """
     initcode = """
 template on_ce(state: void): void = discard
@@ -25,7 +25,6 @@ template on_ce[T: not void](arg: T): void =
 template on_ce(args: varargs[untyped]): void =
     echo args
 """
-
     keywords = [
         "import", "from", "using", "macro", "template", "return", "discard", "once"
     ]
@@ -33,14 +32,15 @@ template on_ce(args: varargs[untyped]): void =
         "case"
     ]
     assnKey = [
-        "var", "let", "const", "proc", "type"
+        "var", "let", "const", "proc", "type", "func"
     ]
-
-let fileDir = getHomeDir() & "/replimcathe"
+    cache_dir = getHomeDir() & "/.replimcathe"
+    exec_cmd = "nim e -r --checks:off --hints:off " & cache_dir & "/repl.nims"
 
 type BlockKind = enum
     Main
     Proc
+    Func
     Temp
     Macro
     For
@@ -55,7 +55,6 @@ type BlockKind = enum
     Type
     Other
 
-
 type Replim = object of RootObj
     nowblock: seq[BlockKind]
     pastblock: seq[BlockKind]
@@ -65,7 +64,7 @@ proc escape(s: var string) =
     s = s.replace(re".\[D", "").replace("[", "")
 
 proc save(self: Replim) =
-    let f = open(fileDir & "/repl.nims", fmWrite)
+    let f = open(cache_dir & "/repl.nims", fmWrite)
     f.write(self.code)
     f.close()
 
@@ -92,6 +91,7 @@ proc delLine(self: var Replim) =
     self.code = codelines.join("\n") & "\n"
 
 proc delOnce(self: var Replim) =
+    # Unfortunataly, using regex in 'multiReplace' in impossible.
     self.code = self.code.replace(re"once.*", "")
     self.code = self.code.replace(re"case.*\n\n", "\n")
     self.code = self.code.replace(re"\n\nelse:\n( .*)*\n", "\n\n")
@@ -135,8 +135,8 @@ proc orderType(self: Replim, order: string): string =
             return "oncecall"
 
 proc newReplim(): Replim =
-    if not existsDir(fileDir):
-        createDir(fileDir)
+    if not dirExists(cache_dir):
+        createDir(cache_dir)
     result.nowblock = @[Main]
     result.pastblock = @[Main]
     result.code = initcode
@@ -159,23 +159,23 @@ proc main() =
 
         var order = stdin.readline()
         case order
-        of ":quit":
+        of ":quit", ":q", ":exit", ":e":
             break
-        of ":show":
+        of ":display", ":d":
             echo "block: ", vm.nowblock
             echo "code:\n", vm.code.replace(initcode, "")
             continue
-        of ":clear":
+        of ":clear", ":c":
             vm.nowblock = @[Main]
             vm.pastblock = @[Main]
             vm.code = initcode
             continue
-        of ":back":
+        of ":back", ":b":
             vm.delLine()
             vm.nowblock = vm.pastblock
             continue
         # for debuging
-        of ":save":
+        of ":save", ":s":
             vm.save()
             continue
         of "":
@@ -185,7 +185,7 @@ proc main() =
             if vm.nowblock != @[Main]:
                 discard vm.nowblock.pop
             if vm.nowblock.len == 1 and not vm.pastblock.isContinueBlock():
-                let (outs, errc) = execCmdEx(fmt"nim e -r --checks:off --hints:off {fileDir}/repl.nims")
+                let (outs, errc) = execCmdEx(exec_cmd)
                 if errc == 0:
                     echo outs
                     vm.delOnce()
@@ -229,6 +229,8 @@ proc main() =
                 case order.split(" ")[0]
                 of "proc":
                     vm.nowblock.add(Proc)
+                of "func":
+                    vm.nowblock.add(Func)
                 of "template":
                     vm.nowblock.add(Temp)
                 of "macro":
@@ -257,7 +259,7 @@ proc main() =
                     vm.nowblock.add(Other)
 
             if vm.nowblock.len() == 1 and not vm.pastblock.isContinueBlock():
-                let (outs, errc) = execCmdEx(fmt"nim e -r --checks:off --hints:off {fileDir}/repl.nims")
+                let (outs, errc) = execCmdEx(exec_cmd)
                 if errc == 0:
                     echo outs
                     vm.delOnce()
@@ -273,4 +275,4 @@ if isMainModule:
     try:
         main()
     finally:
-        removeDir(fileDir)
+        removeDir(cache_dir)
