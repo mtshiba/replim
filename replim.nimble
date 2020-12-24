@@ -1,7 +1,7 @@
 # Package
 
 version       = "0.2.3"
-author        = "gmShiba"
+author        = "mtshiba"
 description   = "most quick REPL of nim"
 license       = "MIT"
 binDir        = "bin"

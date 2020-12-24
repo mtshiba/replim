@@ -1,24 +1,24 @@
 # Replim
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.org/gmshiba/replim.svg?branch=master)](https://travis-ci.org/gmshiba/replim)
+[![Build Status](https://travis-ci.org/mtshiba/replim.svg?branch=master)](https://travis-ci.org/mtshiba/replim)
 [![nimble](https://raw.githubusercontent.com/yglukhov/nimble-tag/master/nimble.png)](https://github.com/yglukhov/nimble-tag)
 
 replim is the most quick REPL of nim.
 
-# DEMO
+## DEMO
 
 ![demo](demo/replim.gif)
 
-# Installation
+## Installation
 
 if you have installed Nim already, that's easy:
 
-```
+```bash
 nimble install replim
 ```
 
-
-# Features
+## Features
 
 - checking value without "echo"
 - auto indent
@@ -27,7 +27,7 @@ nimble install replim
 if you assigned variable or functions,
 you can check those value without typing "echo".
 
-```
+```nim
 >>>var foo = "bar"
 >>>foo
 bar
@@ -42,18 +42,18 @@ foo
 foo, bar
 ```
 
-**Warning**
+## **Warning**
 
-- replim can't import librarys that import C library at present.
+- replim can't import libraries that import C library at present.
 
-```
+```nim
 >>>import nre
 ..\..\..\..\..\nim-0.xx.x\lib\impure\nre.nim(432, 24) Error: cannot 'importc' variable at compile time
 ```
 
-# Options
+## Options
 
 - **:back** : clear last line.
 - **:clear** : clear all lines.
 - **:quit** : quit this program.
-- **:show** : display history.
+- **:display** : display history.
