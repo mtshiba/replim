@@ -91,7 +91,7 @@ proc delLine(self: var Replim) =
     self.code = codelines.join("\n") & "\n"
 
 proc delOnce(self: var Replim) =
-    # Unfortunataly, using regex in 'multiReplace' in impossible.
+    # Unfortunataly, using regex in 'multiReplace' is impossible.
     self.code = self.code.replace(re"once.*", "")
     self.code = self.code.replace(re"case.*\n\n", "\n")
     self.code = self.code.replace(re"\n\nelse:\n( .*)*\n", "\n\n")
@@ -130,7 +130,6 @@ proc orderType(self: Replim, order: string): string =
     else:
         if self.nowblock.find(Proc) != -1 or self.nowblock.find(Assn) != -1 or self.nowblock.find(Type) != -1:
             return "expression"
-        # onceが必要なのはこれだけ
         else:
             return "oncecall"
 
